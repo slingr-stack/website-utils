@@ -6,6 +6,9 @@ if (typeof jQuery !== 'undefined') {
     if (!slingr.ws) {
         slingr.ws = {};
     }
+    if (!slingr.wsFetch) {
+        slingr.wsFetch = {};
+    }
     if (!slingr.ui) {
         slingr.ui = {};
     }
@@ -179,6 +182,45 @@ if (typeof jQuery !== 'undefined') {
         };
     };
 
+    // EcmaScript6 - Fetch - Promises
+
+    slingr.wsFetch.buildUrl = (url, params = {}) => {
+        const qs = Object.keys(params).length ? '?' + new URLSearchParams(params).toString() : '';
+        if (!url) return slingr.ws.API_URL + qs;
+        if (url.startsWith('/')) return slingr.ws.API_URL + url + qs;
+        return slingr.ws.API_URL + '/' + url + qs;
+    };
+
+    slingr.wsFetch.request = async (method, url, params = {}, body = {}) => {
+        while (! slingr.ws.TOKEN) {
+          await new Promise(resolve => {
+              setTimeout(resolve, 500);
+          });
+        }
+
+        let options = {
+            method: method,
+            headers: {
+                ...slingr.ws.HEADERS,
+                token: slingr.ws.TOKEN,
+            }
+        };
+        if (['PUT', 'POST'].includes(method)) {
+            options.body = JSON.stringify(body);
+        }
+        url = slingr.wsFetch.buildUrl(url, params);
+        let res = await fetch(url, options);
+        let data = await res.json();
+        if (! res.ok) {
+            throw new Error(data.message, { cause: data });
+        }
+        return data;
+    };
+
+    slingr.wsFetch.get = async (url, params) => slingr.wsFetch.request('GET', url, params);
+    slingr.wsFetch.post = async (url, params, body) => slingr.wsFetch.request('POST', url, params, body);
+    slingr.wsFetch.put = async (url, params, body) => slingr.wsFetch.request('PUT', url, params, body);
+    slingr.wsFetch.del = async (url, params) => slingr.wsFetch.request('DELETE', url, params);
 
     ///////////////////////////////////////////////////////////////////////////////////////////////
     // END OF GENERIC LIBRARY TO HELP ACCESSING WEB SERVICES
